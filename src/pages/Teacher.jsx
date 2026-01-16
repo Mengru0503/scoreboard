@@ -1,33 +1,60 @@
+import { db } from '../firebase/config';
+import { doc, updateDoc } from 'firebase/firestore';
+
 function Teacher({ groups, setGroups }) {
-  const addTaskScore = (groupId, value) => {
-    setGroups(prev =>
-      prev.map(g =>
-        g.id === groupId
-          ? { ...g, taskScore: g.taskScore + value }
-          : g
-      )
-    );
+  const addTaskScore = async (groupId, value) => {
+    const groupRef = doc(db, 'groups', groupId);
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+
+    await updateDoc(groupRef, {
+      taskScore: group.taskScore + value
+    });
   };
 
-  const addLifeScore = (groupId, type, value = 1) => {
-    setGroups(prev =>
-      prev.map(g =>
-        g.id === groupId
-          ? {
-              ...g,
-              lifeScore: {
-                ...g.lifeScore,
-                [type]: g.lifeScore[type] + value
-              }
-            }
-          : g
-      )
-    );
+  const addLifeScore = async (groupId, type, value = 1) => {
+    const groupRef = doc(db, 'groups', groupId);
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+
+    await updateDoc(groupRef, {
+      lifeScore: {
+        ...group.lifeScore,
+        [type]: group.lifeScore[type] + value
+      }
+    });
+  };
+
+  // 新增：重置所有小組分數
+  const resetScores = async () => {
+    if (!window.confirm('確定要重置所有分數嗎？這個操作無法復原！')) return;
+
+    for (const group of groups) {
+      const groupRef = doc(db, 'groups', group.id);
+      await updateDoc(groupRef, {
+        taskScore: 0,
+        lifeScore: {
+          teamwork: 0,
+          manners: 0,
+          discipline: 0
+        }
+      });
+    }
   };
 
   return (
     <div style={{ padding: 20 }}>
       <h2>👩‍🏫 老師加分面板</h2>
+
+      {/* 新增重置按鈕 */}
+      <div style={{ marginBottom: 16 }}>
+        <button
+          onClick={resetScores}
+          style={{ backgroundColor: '#f44336', color: '#fff', padding: '8px 16px', border: 'none', borderRadius: 4 }}
+        >
+          重置所有分數
+        </button>
+      </div>
 
       {groups.map(group => {
         const lifeTotal = Object.values(group.lifeScore).reduce(
